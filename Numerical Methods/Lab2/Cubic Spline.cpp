@@ -2,75 +2,66 @@
 
 int main() {
     int n, i, j;
-    float x[20], y[20], h[20], a[20], b[20], c[20], d[20];
-    float alpha[20], l[20], mu[20], z[20];
-    float xp, result;
+    float x[20], y[20], h[20];
+    float alpha[20], l[20], u[20], z[20];
+    float M[20];     // second derivatives
+    float xp, fx;
 
-    printf("--- Cubic Spline Interpolation---\n");
-
-    printf("\nEnter number of data points: ");
+    printf("Enter number of data points: ");
     scanf("%d", &n);
 
-    printf("\nEnter x values:\n");
+    printf("Enter x and y values:\n");
     for (i = 0; i < n; i++) {
-        printf("x%d = ", i);
-        scanf("%f", &x[i]);
+        scanf("%f %f", &x[i], &y[i]);
     }
 
-    printf("\nEnter corresponding y values:\n");
-    for (i = 0; i < n; i++) {
-        printf("f(x%d) = ", i);
-        scanf("%f", &y[i]);
-    }
-
-
+    /* Step 1: Calculate h[i] */
     for (i = 0; i < n - 1; i++) {
         h[i] = x[i + 1] - x[i];
     }
 
- 
+    /* Step 2: Calculate alpha */
+    alpha[0] = alpha[n - 1] = 0;
     for (i = 1; i < n - 1; i++) {
-        alpha[i] = (3 / h[i]) * (y[i + 1] - y[i]) -
-                   (3 / h[i - 1]) * (y[i] - y[i - 1]);
+        alpha[i] = (3 / h[i]) * (y[i + 1] - y[i])
+                 - (3 / h[i - 1]) * (y[i] - y[i - 1]);
     }
 
+    /* Step 3: Solve tridiagonal system (Thomas algorithm) */
     l[0] = 1;
-    mu[0] = 0;
+    u[0] = 0;
     z[0] = 0;
 
     for (i = 1; i < n - 1; i++) {
-        l[i] = 2 * (x[i + 1] - x[i - 1]) - h[i - 1] * mu[i - 1];
-        mu[i] = h[i] / l[i];
+        l[i] = 2 * (x[i + 1] - x[i - 1]) - h[i - 1] * u[i - 1];
+        u[i] = h[i] / l[i];
         z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i];
     }
 
     l[n - 1] = 1;
     z[n - 1] = 0;
-    c[n - 1] = 0;
-
+    M[n - 1] = 0;
 
     for (j = n - 2; j >= 0; j--) {
-        c[j] = z[j] - mu[j] * c[j + 1];
-        b[j] = (y[j + 1] - y[j]) / h[j] -
-               h[j] * (c[j + 1] + 2 * c[j]) / 3;
-        d[j] = (c[j + 1] - c[j]) / (3 * h[j]);
-        a[j] = y[j];
+        M[j] = z[j] - u[j] * M[j + 1];
     }
 
-    printf("\nEnter the value of x to find f(x): ");
+    /* Step 4: Interpolation */
+    printf("Enter value of x to interpolate: ");
     scanf("%f", &xp);
 
-   for (i = 0; i < n - 1; i++) {
-        if (xp >= x[i] && xp <= x[i + 1]) {
-            result = a[i]
-                   + b[i] * (xp - x[i])
-                   + c[i] * (xp - x[i]) * (xp - x[i])
-                   + d[i] * (xp - x[i]) * (xp - x[i]) * (xp - x[i]);
+    for (i = 0; i < n - 1; i++) {
+        if (xp >= x[i] && xp <= x[i + 1])
             break;
-        }
     }
 
-    printf("\nApproximate value at x = %.3f is f(x) = %.3f\n", xp, result);
+    fx = (M[i] * (x[i + 1] - xp) * (x[i + 1] - xp) * (x[i + 1] - xp)) / (6 * h[i])
+       + (M[i + 1] * (xp - x[i]) * (xp - x[i]) * (xp - x[i])) / (6 * h[i])
+       + (y[i] - M[i] * h[i] * h[i] / 6) * (x[i + 1] - xp) / h[i]
+       + (y[i + 1] - M[i + 1] * h[i] * h[i] / 6) * (xp - x[i]) / h[i];
+
+    printf("Interpolated value at x = %.4f is %.6f\n", xp, fx);
 
     return 0;
 }
+
